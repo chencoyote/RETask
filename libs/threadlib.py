@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # import buildin libs
-import os
+import time
 import inspect
 import ctypes
 import threading
@@ -27,6 +27,7 @@ class StoppableThread(threading.Thread):
     def __init__(self):
         super(StoppableThread, self).__init__()
         self._stop = threading.Event()
+        self._lock = threading.Lock()
 
     def stop(self):
         self._stop.set()
@@ -37,9 +38,12 @@ class StoppableThread(threading.Thread):
     def run(self):
         try:
             #while not self._stop.isSet():
+            self._lock.acquire()
             self.handle()
         except Exception:
             print "some error happen"
+        finally:
+            self._lock.release()
 
     def join(self):
         self.stop()
@@ -108,7 +112,11 @@ class threadPool(object):
     def get_all_tid(self):
         return self._pool.keys()
 
-    def stop_all_process(self, retry_for_stop=3):
+    def get_active_thread(self):
+        return threading.active_count() 
+
+    def stop_all_process(self, retry_for_stop=5):
+        a_thread = self.get_active_thread()
         if len(self._pool) > 0:
             for tid, t_map in self._pool.items():
                 try:
@@ -118,15 +126,17 @@ class threadPool(object):
         else:
             return 
 
-        t = 0
-        while self._pool and t < retry_for_stop:
+        end_time = time.time() + retry_for_stop
+
+        while self._pool and time.time() < end_time:
+            print "kill you"
             for tid, t_map in self._pool.items():
-                try:
-                    if t_map["Thread"].stopped():
+                if t_map["Thread"].stopped() and self.get_active_thread() < a_thread:
+                    print  "start delete"
+                    try:
                         del self._pool[tid]
-                except KeyError:
-                    pass
-            t += 1
-        
+                        pass
+                    except KeyError:
+                        pass
 
 
