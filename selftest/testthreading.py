@@ -39,6 +39,7 @@ def make_and_start_thread_pool(th_num_pool=5, daemon=False):
         new_thread = threading.Thread(target=do_work_from_queue)
         new_thread.setDaemon(daemon)
         Pool.append(new_thread)
+        print Pool
         new_thread.start()
 
 def req_work(data, command="start"):
